@@ -1,58 +1,41 @@
 jQuery(document).ready(function($) {
     $('#affiliate-registration-form').on('submit', function(e) {
         e.preventDefault();
-        
         var $form = $(this);
         var $button = $form.find('button[type="submit"]');
         var originalText = $button.text();
-        // The $message variable from original is removed as per updated file logic
-        
-        // Show loading state
-        $button.prop('disabled', true).text('Processing...');
-        // The $message.html('').removeClass('error success'); from original is removed
 
-        // Prepare form data
+        $button.prop('disabled', true).text('Processing...');
+
         var formData = {
             action: 'register_as_affiliate',
             payment_email: $form.find('#payment-email').val(),
-            terms_agreed: $form.find('#terms-agreed').is(':checked') ? 1 : 0, // Changed selector from [name="terms_agreed"] to #terms-agreed
-            security: $form.find('#affiliate_nonce').val() // Changed from affiliateRegistration.nonce to #affiliate_nonce
+            terms_agreed: $form.find('#terms-agreed').is(':checked') ? 1 : 0,
+            // FIX: use the correct selector for the nonce field
+            security: $form.find('[name="affiliate_nonce"]').val()
         };
         
-        // Make AJAX request
         $.ajax({
-            url: ajaxurl, // Changed from affiliateRegistration.ajaxurl to ajaxurl
-            type: 'POST',
-            data: formData, // Uses the new formData variable
-            dataType: 'json', // Added dataType
+            url: affiliateRegistration.ajax_url,
+            method: 'POST',
+            data: formData,
+            dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    // Show success message
-                    $('#affiliate-registration-message').html( // Direct targeting, no $message variable
-                        '<div class="notice notice-success">' + response.data.message + '</div>' // Expected response.data.message
-                    );
-                    
-                    // Redirect if needed
-                    if (response.data.redirect) { // Changed redirect logic
-                        window.location.href = response.data.redirect;
+                    $('#affiliate-registration-message').html('<div class="success">' + response.data.message + '</div>');
+                    if (response.data.redirect) {
+                        setTimeout(function() {
+                            window.location.href = response.data.redirect;
+                        }, 1200);
                     }
-                    // The slideUp() from original is removed
                 } else {
-                    // Show error message
-                    $('#affiliate-registration-message').html( // Direct targeting, no $message variable
-                        '<div class="notice notice-error">' + response.data.message + '</div>' // Expected response.data.message
-                    );
-                    $button.text(originalText).prop('disabled', false);
+                    $('#affiliate-registration-message').html('<div class="error">' + response.data.message + '</div>');
+                    $button.prop('disabled', false).text(originalText);
                 }
             },
             error: function(xhr) {
-                var errorMsg = xhr.responseJSON && xhr.responseJSON.data ? 
-                    xhr.responseJSON.data.message : 'An error occurred. Please try again.'; // Expected response.data.message
-                
-                $('#affiliate-registration-message').html( // Direct targeting, no $message variable
-                    '<div class="notice notice-error">' + errorMsg + '</div>'
-                );
-                $button.text(originalText).prop('disabled', false);
+                $('#affiliate-registration-message').html('<div class="error">An error occurred. Please try again.</div>');
+                $button.prop('disabled', false).text(originalText);
             }
         });
     });

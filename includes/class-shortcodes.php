@@ -3,67 +3,78 @@ namespace AffiliateManager;
 
 class Shortcodes {
     public function __construct() {
-        add_shortcode('affiliate_register', [$this, 'register_form']);
+        add_shortcode('affiliate_register', [$this, 'affiliate_register_combined']);
         add_shortcode('affiliate_link_generator', [$this, 'link_generator']);
         add_shortcode('affiliate_dashboard', [$this, 'dashboard']);
-        
-        // --- NEW UPDATE: Register the new user registration shortcode ---
-        add_shortcode('affiliate_user_register', [$this, 'user_register_form']); 
-        // You can change 'affiliate_user_register' to any shortcode tag you prefer, e.g., 'am_user_register'
-        // --- END NEW UPDATE ---
+        // Standalone user registration form if needed elsewhere
+        add_shortcode('affiliate_user_register', [$this, 'user_register_form']);
     }
-    
-    public function register_form() {
-        if (is_user_logged_in() && $this->is_affiliate()) {
+
+    /**
+     * [affiliate_register] shortcode:
+     * - If not logged in, show WP user registration form (auto-login on success).
+     * - If logged in, show affiliate registration form (unless already affiliate).
+     */
+    public function affiliate_register_combined() {
+        if (!is_user_logged_in()) {
+            ob_start();
+            include AFFILIATE_MANAGER_PLUGIN_DIR . 'templates/user-register-form.php';
+            return ob_get_clean();
+        }
+
+        if ($this->is_affiliate()) {
             return '<div class="affiliate-notice">' . 
                    __('You are already registered as an affiliate', 'affiliate-manager') . 
                    '</div>';
         }
-        
+
         ob_start();
         include(AFFILIATE_MANAGER_PLUGIN_DIR . 'templates/register-form.php');
         return ob_get_clean();
     }
-    
+
     public function link_generator($atts) {
         if (!is_user_logged_in() || !$this->is_affiliate()) {
             return '<div class="affiliate-notice">' . 
                    __('Please login as an affiliate to access this feature', 'affiliate-manager') . 
                    '</div>';
         }
-        
+
         $atts = shortcode_atts([
             'default_url' => ''
         ], $atts);
-        
+
         ob_start();
         include(AFFILIATE_MANAGER_PLUGIN_DIR . 'templates/link-generator.php');
         return ob_get_clean();
     }
-    
+
     public function dashboard() {
         if (!is_user_logged_in() || !$this->is_affiliate()) {
             return '<div class="affiliate-notice">' . 
                    __('Please login as an affiliate to access this feature', 'affiliate-manager') . 
                    '</div>';
         }
-        
+
         ob_start();
         include(AFFILIATE_MANAGER_PLUGIN_DIR . 'templates/dashboard/main.php');
         return ob_get_clean();
     }
-    
+
     private function is_affiliate() {
         $user = wp_get_current_user();
         return in_array('affiliate', (array) $user->roles);
     }
 
-    // --- NEW UPDATE: The user_register_form() method is added here ---
+    /**
+     * Standalone user registration form [affiliate_user_register].
+     * (You may keep or remove this if not needed.)
+     */
     public function user_register_form() {
         if (is_user_logged_in()) {
             return '<div class="notice notice-info">' . __('You are already logged in.', 'affiliate-manager') . '</div>';
         }
-        
+
         ob_start();
         ?>
         <form id="affiliate-user-register" method="post">
@@ -95,5 +106,4 @@ class Shortcodes {
         <?php
         return ob_get_clean();
     }
-    // --- END NEW UPDATE ---
 }
